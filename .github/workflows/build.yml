@@ -6,23 +6,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unzip
-        run: |
-          unzip -o myra.zip
-          find . -name "gradlew" -type f
-          ls -la
+        run: unzip -o myra.zip
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-      - name: Build APK
+      - name: Fix Keystore
         run: |
-          chmod +x gradlew 2>/dev/null || true
-          if [ -f gradlew ]; then ./gradlew assembleDebug; else gradle assembleDebug; fi
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          ls -la debug.keystore
+          # যেখানেই খুঁজুক, সব জায়গায় কপি করে দিলাম
+          cp debug.keystore app/debug.keystore || true
+      - name: Build APK
+        run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: MYRA-APK
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            **/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
