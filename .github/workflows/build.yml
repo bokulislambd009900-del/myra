@@ -1,0 +1,43 @@
+name: Build MYRA APK
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Unzip myra
+        run: |
+          if [ -f myra.zip ]; then unzip -o myra.zip; rm myra.zip; fi
+          if [ -d myra ]; then mv myra/* .; mv myra/.* . 2>/dev/null || true; fi
+          ls -la
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install and Prepare
+        run: |
+          npm install
+          npm run build || echo "no build"
+          npm i -g @capacitor/cli
+          npx cap init Myra com.myra.app --web-dir=dist || npx cap init Myra com.myra.app --web-dir=build || npx cap init Myra com.myra.app --web-dir=.
+          npx cap add android
+          npm i @capacitor/android
+          npx cap copy android || npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MYRA-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
